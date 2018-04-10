@@ -1,0 +1,541 @@
+--创建数据表空间
+CREATE TABLESPACE data_tablespace
+datafile 'c:\datatablespace\data.dbf' SIZE 200M
+AUTOEXTEND ON NEXT 2M MAXSIZE 2000M;
+
+--创建索引表空间
+CREATE TABLESPACE index_tablespace
+datafile 'e:\indextablespace\index.dbf' SIZE 200M
+AUTOEXTEND ON NEXT 5M MAXSIZE 1000M;
+
+--创建临时表空间
+CREATE TEMPORARY TABLESPACE temp_tablespace
+tempfile 'c:\temptablespace\temp.dbf' SIZE 200M
+AUTOEXTEND ON NEXT 5 MAXSIZE 2000M;
+
+--创建用户
+CREATE USER pengyi IDENTIFIED BY pengyi
+default	 tablespace data_tablespace
+temporary tablespace temp_tablespace;
+
+
+--给用户分配表空间使用配额
+ALTER USER pengyi QUOTA 150M ON data_tablespace;
+ALTER USER pengyi QUOTA 150M ON temp_tablespace;
+ALTER USER pengyi QUOTA 150M ON index_tablespace;
+
+--给用户授权
+grant connect,resource to pengyi;
+grant delete any table,update any table,insert any table,select any table,
+execute any procedure,create any view to pengyi;
+
+
+
+--创建学生信息表
+CREATE TABLE Student
+(
+	Stu_no varchar(15)  primary key,
+	Stu_name varchar(20) not null,
+	Stu_sex char(2) check(Stu_sex='男' or Stu_sex = '女') not null,
+	Stu_birthday Date not null,
+	Stu_pnumber varchar(15) not null,
+	Stu_class varchar(20) not null,
+	Stu_password varchar(20) not null
+);
+
+--创建课程信息表
+CREATE TABLE Course
+(
+	Cou_no varchar(5) primary key,
+	Cou_name varchar(20) not null,
+	Cou_period number not null,
+	Cou_credit number not null
+);
+
+--创建教师信息表
+CREATE TABLE Teacher
+(
+	Tea_no varchar(15) primary key,
+	Tea_name varchar(20) not null,
+	Tea_pnumber varchar(15) not null,
+	Tea_password varchar(20) not null
+);
+
+--创建管理员信息表
+CREATE TABLE Administrator
+(
+	Adm_no varchar(20) primary key,
+	Adm_name varchar(20) not null,
+	Adm_password varchar(20) not null
+);
+
+--创建成绩表
+CREATE TABLE  Score
+(
+	Stu_no varchar(20) not null,
+	Cou_no varchar(20) not null,
+	Score number check(score>=0 and score<=100),
+	foreign key(Stu_no) references Student(Stu_no) on delete cascade,
+	foreign key(Cou_no) references Course(Cou_no) on delete cascade
+);
+--创建选课状态表
+CREATE TABLE XK_STATE_Tab
+(
+	State NUMBER(1) default(0) check(State = 1 OR State = 0) not null
+);
+--添加联合主键
+alter table Score add constraint pl_tab primary key(Stu_no,Cou_no);
+
+--创建课程安排表
+CREATE TABLE Schedule
+(
+	Cou_no varchar(20）not null,
+	Tea_no varchar(10) not null,
+	foreign key(Cou_no) references Course(Cou_no) on delete cascade,
+	foreign key(Tea_no) references Teacher(Tea_no) on delete cascade
+);
+--添加人数这一列
+alter table Schedule add(Sch_renshu number check(Sch_renshu >= 0));	
+--添加已选人数这一列
+Alter table Schedule add(Sch_yi_RS number check(Sch_yi_RS >=0));
+
+
+--添加联合主键
+alter table Schedule add constraint pk_tab_Sche primary key(Cou_no,Tea_no);
+
+--创建索引
+CREATE INDEX STD_Stu_no_index ON Student(Stu_no) tablespace index_tablespace;
+CREATE INDEX SCO_Stu_no_index ON Score(Stu_no) tablespace index_tablespace;
+CREATE INDEX SCO_Cou_no_index ON Score(Cou_no) tablespace index_tablespace;
+CREATE INDEX COU_Cou_no_index ON Course(Cou_no) tablespace index_tablespace;
+CREATE INDEX TEA_Tea_no_index ON Teacher(Tea_no) tablespace index_tablespace;
+CREATE INDEX SCH_Cou_no_index ON Schedule(Cou_no) tablespace index_tablespace;
+CREATE INDEX SCH_Tea_no_index ON Schedule(Tea_no) tablespace index_tablespace;
+
+
+
+--创建课程安排视图
+CREATE OR REPLACE VIEW Tea_Sch
+AS
+SELECT Tea.*,Cou.Cou_no,Cou.Cou_name FROM Teacher  Tea,Schedule  Sch,Course  Cou  WHERE Tea.Tea_no = Sch.Tea_no  and Sch.Cou_no =  Cou.Cou_no;
+
+--学生选课信息视图
+CREATE OR REPLACE VIEW Stu_Cou
+AS
+SELECT Stu.*,Sco.Cou_no,Cou.Cou_name,Sco.score FROM Student  Stu,Score  Sco,Course Cou WHERE Stu.Stu_no = Sco.Stu_no and Sco.Cou_no = Cou.Cou_no;
+
+
+--插入数据
+--插入学生信息
+insert into Student(Stu_no,Stu_name,Stu_sex,Stu_birthday,Stu_pnumber,Stu_class,Stu_password) 
+VALUES('201542256065','彭旖'，'男'，to_date('1996-06-12','YYYY-MM-DD'),18186424431,'软工1502','123456');
+
+insert into Student(Stu_no,Stu_name,Stu_sex,Stu_birthday,Stu_pnumber,Stu_class,Stu_password) 
+VALUES('201542256066','舒杰'，'男'，to_date('1997-06-12','YYYY-MM-DD'),18186424432,'软工1502','123456');
+
+
+insert into Student(Stu_no,Stu_name,Stu_sex,Stu_birthday,Stu_pnumber,Stu_class,Stu_password) 
+VALUES('201542256067','朱满超'，'男'，to_date('1997-07-12','YYYY-MM-DD'),18186424433,'软工1502','123456');
+
+
+insert into Student(Stu_no,Stu_name,Stu_sex,Stu_birthday,Stu_pnumber,Stu_class,Stu_password) 
+VALUES('201542256068','赵李柏'，'男'，to_date('1997-07-12','YYYY-MM-DD'),18186424434,'软工1502','123456');
+
+
+insert into Student(Stu_no,Stu_name,Stu_sex,Stu_birthday,Stu_pnumber,Stu_class,Stu_password) 
+VALUES('201542256069','樊秋轩'，'男'，to_date('1997-06-12','YYYY-MM-DD'),1818642440,'软工1502','123456');
+
+
+insert into Student(Stu_no,Stu_name,Stu_sex,Stu_birthday,Stu_pnumber,Stu_class,Stu_password) 
+VALUES('201542256070','韩若尘'，'男'，to_date('1997-06-12','YYYY-MM-DD'),18186424441,'软工1502','123456');
+
+
+insert into Student(Stu_no,Stu_name,Stu_sex,Stu_birthday,Stu_pnumber,Stu_class,Stu_password) 
+VALUES('201542256071','龙晨辉'，'男'，to_date('1997-06-12','YYYY-MM-DD'),18186424442,'软工1502','123456');
+
+
+insert into Student(Stu_no,Stu_name,Stu_sex,Stu_birthday,Stu_pnumber,Stu_class,Stu_password) 
+VALUES('201542256072','王敏'，'男'，to_date('1997-06-12','YYYY-MM-DD'),18186424443,'软工1502','123456');
+
+
+insert into Student(Stu_no,Stu_name,Stu_sex,Stu_birthday,Stu_pnumber,Stu_class,Stu_password) 
+VALUES('201542256073','张毅’'，'男'，to_date('1997-06-12','YYYY-MM-DD'),18186424444,'软工1502','123456');
+
+
+insert into Student(Stu_no,Stu_name,Stu_sex,Stu_birthday,Stu_pnumber,Stu_class,Stu_password) 
+VALUES('201542256074','白祖勇'，'男'，to_date('1997-06-12','YYYY-MM-DD'),18186424445,'软工1502','123456');
+
+
+insert into Student(Stu_no,Stu_name,Stu_sex,Stu_birthday,Stu_pnumber,Stu_class,Stu_password) 
+VALUES('201542256075','高青山'，'男'，to_date('1997-06-12','YYYY-MM-DD'),18186424432,'软工1502','123456');
+
+
+insert into Student(Stu_no,Stu_name,Stu_sex,Stu_birthday,Stu_pnumber,Stu_class,Stu_password) 
+VALUES('201542256076','吴昌诚'，'男'，to_date('1997-06-12','YYYY-MM-DD'),18186424432,'软工1502','123456');
+
+--插入课程信息
+insert into Course(Cou_no,Cou_name,Cou_period,Cou_credit) 
+VALUES('001','Oracle使用教程',9,1);
+
+insert into Course(Cou_no,Cou_name,Cou_period,Cou_credit) 
+VALUES('002','软件工程导论',8,2);
+
+insert into Course(Cou_no,Cou_name,Cou_period,Cou_credit) 
+VALUES('003','网页制作',7,1);
+
+insert into Course(Cou_no,Cou_name,Cou_period,Cou_credit) 
+VALUES('004','photostop图片制作',7,2);
+
+insert into Course(Cou_no,Cou_name,Cou_period,Cou_credit) 
+VALUES('005','多媒体技术',6,1);
+
+insert into Course(Cou_no,Cou_name,Cou_period,Cou_credit) 
+VALUES('006','Oracle使用教程',7,2);
+
+insert into Course(Cou_no,Cou_name,Cou_period,Cou_credit) 
+VALUES('007','离散数学',7,2);
+
+insert into Course(Cou_no,Cou_name,Cou_period,Cou_credit) 
+VALUES('008','JAVA SE程序设计',7,1);
+
+insert into Course(Cou_no,Cou_name,Cou_period,Cou_credit) 
+VALUES('009','计算机网络',8,1);
+
+insert into Course(Cou_no,Cou_name,Cou_period,Cou_credit) 
+VALUES('010','数据结构',8,2);
+
+
+--插入教师信息
+insert into Teacher(Tea_no,Tea_name,Tea_pnumber,Tea_password)
+VALUES('201501','李子鸣'，'18186421111','123456');
+
+insert into Teacher(Tea_no,Tea_name,Tea_pnumber,Tea_password)
+VALUES('201502','冯云鹏'，'18186421112'，'123456');
+
+insert into Teacher(Tea_no,Tea_name,Tea_pnumber,Tea_password)
+VALUES('201503','胡锦坤'，'18186421113'，'123456');
+
+insert into Teacher(Tea_no,Tea_name,Tea_pnumber,Tea_password)
+VALUES('201504','宋诗磊'，'18186421114'，'123456');
+
+insert into Teacher(Tea_no,Tea_name,Tea_pnumber,Tea_password)
+VALUES('201505','董家廷'，'18186421115'，'123456');
+
+insert into Teacher(Tea_no,Tea_name,Tea_pnumber,Tea_password)
+VALUES('201506','黄邹'，'18186421116'，'123456');
+
+insert into Teacher(Tea_no,Tea_name,Tea_pnumber,Tea_password)
+VALUES('201507','桂文杰'，'18186421117'，'123456');
+
+insert into Teacher(Tea_no,Tea_name,Tea_pnumber,Tea_password)
+VALUES('201508','欧阳翔宇'，'18186421118'，'123456');
+
+insert into Teacher(Tea_no,Tea_name,Tea_pnumber,Tea_password)
+VALUES('201509','张凡'，'18186421119'，'123456');
+
+insert into Teacher(Tea_no,Tea_name,Tea_pnumber,Tea_password)
+VALUES('201510','陈睿琪'，'18186421120'，'123456');
+
+insert into Teacher(Tea_no,Tea_name,Tea_pnumber,Tea_password)
+VALUES('201511','孟越'，'18186421121'，'123456');
+
+
+
+--插入管理员信息
+insert into Administrator(Adm_no,Adm_name,Adm_password)
+VALUES('233','233','233');
+
+--插入成绩信息
+insert into Score(Stu_no,Cou_no,score)
+VALUES('201542256065','001',90);
+
+insert into Score(Stu_no,Cou_no,score)
+VALUES('201542256065','002',60);
+
+
+insert into Score(Stu_no,Cou_no,score)
+VALUES('201542256065','003',59);
+
+insert into Score(Stu_no,Cou_no,score)
+VALUES('201542256067','001',100);
+
+insert into Score(Stu_no,Cou_no,score)
+VALUES('201542256068','005',70);
+
+insert into Score(Stu_no,Cou_no,score)
+VALUES('201542256068','003',80);
+
+
+insert into Score(Stu_no,Cou_no,score)
+VALUES('201542256068','006',100);
+
+insert into Score(Stu_no,Cou_no,score)
+VALUES('201542256069','007',90);
+
+insert into Score(Stu_no,Cou_no,score)
+VALUES('201542256071','005',100);
+
+insert into Score(Stu_no,Cou_no,score)
+VALUES('201542256072','004',80);
+
+insert into Score(Stu_no,Cou_no,score)
+VALUES('201542256073','002',90);
+
+insert into Score(Stu_no,Cou_no,score)
+VALUES('20154225065','004','');
+
+
+--插入课程安排信息
+insert into Schedule(Cou_no,Tea_no)
+VALUES('001','201501');
+
+insert into Schedule(Cou_no,Tea_no)
+VALUES('002','201502');
+
+insert into Schedule(Cou_no,Tea_no)
+VALUES('003','201503');
+
+insert into Schedule(Cou_no,Tea_no)
+VALUES('004','201504');
+
+insert into Schedule(Cou_no,Tea_no)
+VALUES('005','201505');
+
+insert into Schedule(Cou_no,Tea_no)
+VALUES('006','201506');
+
+insert into Schedule(Cou_no,Tea_no)
+VALUES('007','201507');
+
+insert into Schedule(Cou_no,Tea_no)
+VALUES('008','201508');
+
+insert into Schedule(Cou_no,Tea_no)
+VALUES('009','201509');
+
+insert into Schedule(Cou_no,Tea_no)
+VALUES('010','201510');
+
+insert into Schedule(Cou_no,Tea_no)
+VALUES('002','201501');
+
+
+
+--视图运用
+ Select s.Stu_no,s.Stu_name,s.Stu_class,s.Cou_no from Stu_Cou s  WHERE s.Cou_name = 'Oracle使用教程';
+
+
+--定义函数
+/*
+ 验证学生登入时用户名或密码是否正确
+*/
+CREATE OR REPLACE FUNCTION IsStudentExists(username Student.Stu_no%TYPE,password Student.Stu_password%TYPE)
+RETURN BOOLEAN
+AS
+	v_Count NUMBER; --判断是否有值
+BEGIN
+	SELECT COUNT(Stu_no) INTO v_Count FROM Student WHERE Stu_no = username and Stu_password = password;
+	IF v_Count > 0 THEN
+		RETURN TRUE;
+	ELSE 
+		RETURN FALSE;
+	END IF;
+	
+END;
+
+/*
+验证教师登入时用户名或密码是否正确
+*/	
+CREATE OR REPLACE FUNCTION IsTeacherExists(username Student.Stu_no%TYPE,password Student.Stu_password%TYPE)
+RETURN BOOLEAN
+AS
+	v_Count NUMBER; --判断是否有值
+BEGIN
+	SELECT COUNT(Tea_no) INTO v_Count FROM Teacher WHERE Tea_no = username and Tea_password = password;
+	IF v_Count > 0 THEN
+		RETURN TRUE;
+	ELSE 
+		RETURN FALSE;
+	END IF;
+	
+END;
+
+
+
+/*
+验证管理员登入时用户名或密码是否正确
+*/
+CREATE OR REPLACE FUNCTION IsAdminExists(username Student.Stu_no%TYPE,password Student.Stu_password%TYPE)
+RETURN BOOLEAN
+AS
+	v_Count NUMBER; --判断是否有值
+BEGIN
+	SELECT COUNT(Adm_no) INTO v_Count FROM Administrator WHERE Adm_no = username and Adm_password = password;
+	IF v_Count > 0 THEN
+		RETURN TRUE;
+	ELSE 
+		RETURN FALSE;
+	END IF;
+	
+END;
+
+
+
+--定义过程
+/*
+更新成绩表信息
+*/
+CREATE OR REPLACE PROCEDURE Update_Score_no(Old_Stu_no Student.Stu_no%TYPE,New_Stu_no Student.Stu_no%TYPE)
+AS
+	v_Count NUMBER;
+BEGIN
+	--判断是否存在
+	SELECT COUNT(Stu_no) INTO v_Count FROM Score WHERE Score.Stu_no = Old_Stu_no;
+	IF v_Count < 0 THEN
+		RAISE_APPLICATION_ERROR(-20003,'更新的学生不存在！');
+	END IF;
+	UPDATE Score SET Score.Stu_no = New_Stu_no WHERE Score.Stu_no = Old_Stu_no;
+Exception
+	WHEN OTHERS THEN
+		DBMS_OUTPUT.put_line('SQLERRM = '|| SQLERRM);
+	
+
+END;
+
+
+/*
+登入过程
+*/
+CREATE OR REPLACE PROCEDURE login
+(username Student.Stu_no%TYPE,
+password Student.Stu_password%TYPE,
+v_Choice NUMBER,
+b_flag OUT NUMBER)
+AS
+	  
+BEGIN
+	b_flag := 1;
+	CASE  v_Choice 
+	WHEN 1 THEN
+	 begin
+		IF IsStudentExists(username,password) THEN
+			dbms_output.put_line('学生登入成功');
+		ELSE
+		  RAISE_APPLICATION_ERROR(-20000,'学生登入失败，请检查用户名和密码是否正确！');
+		END IF;
+	 end;
+	WHEN 2 THEN
+         begin
+		IF IsTeacherExists(username,password) THEN
+		  dbms_output.put_line('教师登入成功！');
+		ELSE
+		 RAISE_APPLICATION_ERROR(-20000,'教师登入失败，请检查用户名和密码是否正确！');
+		END IF;
+	  end;
+	WHEN 3 THEN
+          begin
+		IF  IsAdminExists(username,password) THEN
+		   dbms_output.put_line('管理员登入成功！');
+		ELSE
+		 RAISE_APPLICATION_ERROR(-20000,'管理员登入失败，请检查用户名和密码是否正确！');
+		END IF;
+	  end;
+	ELSE 
+		RAISE_APPLICATION_ERROR(-20001,'输入错误，请检查输入！');
+	END CASE;
+EXCEPTION 
+	WHEN OTHERS THEN
+			b_flag := 0;
+		DBMS_OUTPUT.put_line('SQLERRM = '|| SQLERRM);
+END;
+
+-- 授予调试权限
+grant  DEBUG CONNECT SESSION to pengyi;
+
+
+--触发器定义
+CREATE OR REPLACE TRIGGER tri_update_Score
+	BEFORE UPDATE ON Student --更新学生学号时触发
+	FOR EACH ROW			--行级触发器
+BEGIN
+	Update_Score_no(:old.Stu_no,:new.Stu_no);
+END;
+
+
+/*
+选修了该课的所有学生
+*/
+CREATE OR REPLACE PROCEDURE Record_Score(Cou_no Course.Cou_no%TYPE)
+AS
+	cursor mycursor is
+	select * from Stu_Cou;
+	v_Result mycursor%ROWTYPE;--结果集变量
+	v_flag BOOLEAN:=FALSE;	--标记是否有人选课
+	v_Count NUMBER:=0;	--计数
+	v_Man_Count NUMBER:=0;  --男生人数
+	v_Woman_Count NUMBER:=0;--女生人数
+BEGIN
+	OPEN mycursor;
+	LOOP
+		FETCH mycursor INTO v_Result;
+	EXIT WHEN mycursor%NOTFOUND;
+	IF LTRIM(v_Result.Cou_no,0) = Cou_no THEN
+		BEGIN	
+	  		DBMS_OUTPUT.PUT_LINE('学号：' || v_Result.Stu_no || ' 姓名: '|| v_Result.Stu_name );	
+			v_flag := TRUE;
+			v_Count := v_Count + 1;
+			IF v_Result.Stu_Sex = '男' THEN
+				v_Man_Count := v_Man_Count + 1;
+			ELSE
+			   	v_Woman_Count := v_Woman_Count + 1;
+			END IF;
+		END;
+	END IF;
+	
+	END LOOP;
+	CLOSE mycursor;
+	IF  v_flag THEN
+		DBMS_OUTPUT.PUT_LINE('查询结束！选修' || v_Result.Cou_name|| '人数为:' || v_Man_Count);
+		DBMS_OUTPUT.PUT_LINE(' 男生人数: ' || v_Man_Count || ' 女生人数: ' || v_Woman_Count);
+		
+	ELSE
+		DBMS_OUTPUT.PUT_LINE('没有学生选修' || v_Result.Cou_name);
+	END IF;
+	
+END;
+
+
+
+/*
+保存选课信息
+*/
+CREATE OR REPLACE PROCEDURE Insert_XK(Cou_no Course.Cou_no%TYPE,Stu_no Student.Stu_no%TYPE)
+AS
+
+BEGIN
+	INSERT INTO Score(Cou_no,Stu_no) VALUES(Cou_no,Stu_no);
+EXCEPTION 
+	WHEN OTHERS THEN
+	DBMS_OUTPUT.PUT_LINE('保存错误！');
+END;
+/*
+*更新选课人数
+*/
+CREATE OR REPLACE 
+PROCEDURE f_Schedule_add(C_no Schedule.Cou_no%TYPE,T_no Schedule.Tea_no%TYPE)
+AS
+	v_Count NUMBER;
+BEGIN
+	DBms_OUTPUT.PUT_LINE('呵呵');
+	SELECT Schedule.SCH_YI_RS INTO v_Count FROM Schedule WHERE Schedule.Cou_no = C_no AND Schedule.Tea_no = T_no;
+	Dbms_output.put_LINE('原值为:' || v_Count);
+	UPDATE Schedule SET SCH_YI_RS = v_Count + 1 WHERE SCHEDULE.COU_NO = C_no AND SCHEDULE.TEA_NO = T_no;
+	SELECT Schedule.SCH_YI_RS INTO v_Count FROM Schedule WHERE Schedule.Cou_no = C_no AND Schedule.Tea_no = T_no;
+	Dbms_output.put_LINE('新值为:'|| v_Count);
+Exception
+	WHEN OTHERS THEN
+	dbms_output.put_line('更新错误');
+
+
+
+END;
